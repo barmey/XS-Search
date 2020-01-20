@@ -1,2 +1,2 @@
 # xs-search
-cross-site (XS) search reproducible environment
+cross-site (XS) search script attacks
