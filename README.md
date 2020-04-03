@@ -1,5 +1,5 @@
 # XS-Search Reproducibility System
-In this repo you can find several xs-search attack script that we use in our reproducibility system.
+In this repo you can find several xs-search attack scripts that we use in our reproducibility system.
 You can download our reproducibility vm on LINK.
 
 Reproducibility system details:
