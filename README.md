@@ -1,6 +1,6 @@
 # XS-Search Reproducibility System
 In this repo you can find several xs-search attack scripts that we use in our reproducibility system.
-You can download our reproducibility vm on https://uconn-my.sharepoint.com/:f:/g/personal/amir_herzberg_uconn_edu1/Em06gpKEq9ZDuirdSg6xbZoBqNdb2iJQQpTM7-28ZDdJgg?e=AfBStc.
+You can download our reproducibility vm on LINK.
 
 Reproducibility system details:
 Web services tend to get updates often and change their API. To ensure the reproducibility of our experiments despite these challenges, we set up an infrastructure that is not dependent on external web-services. This infrastructure was built on a virtual machine that consists of all the technologies necessary to perform XS-Search attacks:
