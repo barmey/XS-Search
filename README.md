@@ -1,9 +1,9 @@
 # XS-Search Attacks
 Cross-site search attacks allow a rogue website to expose private, sensitive user-information from web applications. The attacker exploits timing and other side channels to extract the information, using cleverly-designed cross-site queries.
-https://www.researchgate.net/publication/344503497_Cross-Site_Search_Attacks_Unauthorized_Queries_over_Private_Data
 
+<a href="https://www.researchgate.net/publication/344503497_Cross-Site_Search_Attacks_Unauthorized_Queries_over_Private_Data"> Full-text available </a>
 # Reproducibility System
-In this repo you can find several xs-search attack scripts that we use in our reproducibility system.
+In this repo you can find several xs-search attack scripts that we run on our reproducibility system.
 You can download our reproducibility vm on <a href="https://uconn-my.sharepoint.com/:f:/g/personal/amir_herzberg_uconn_edu1/Em06gpKEq9ZDuirdSg6xbZoBqNdb2iJQQpTM7-28ZDdJgg?e=WKbkqH"> link </a>.
 
 # Reproducibility System details:
