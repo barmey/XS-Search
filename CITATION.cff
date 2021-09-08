@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Meyuhas
+    given-names: Bar
+    orcid: https://orcid.org/0000-0002-5354-4955
+title: "Cross-Site Search Attacks: Unauthorized Queries over Private Data"
+version: 2.0.4
+doi: 10.1007/978-3-030-65411-5_3
+date-released: 2020-12-09
